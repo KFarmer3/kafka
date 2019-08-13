@@ -68,6 +68,9 @@ import org.apache.kafka.common.message.CreateTopicsRequestData;
 import org.apache.kafka.common.message.CreateTopicsRequestData.CreatableTopicCollection;
 import org.apache.kafka.common.message.CreateTopicsResponseData.CreatableTopicResult;
 import org.apache.kafka.common.message.DeleteGroupsRequestData;
+import org.apache.kafka.common.message.DeleteRecordsRequestData;
+import org.apache.kafka.common.message.DeleteRecordsRequestData.DeleteRecordsPartition;
+import org.apache.kafka.common.message.DeleteRecordsRequestData.DeleteRecordsTopic;
 import org.apache.kafka.common.message.DeleteTopicsRequestData;
 import org.apache.kafka.common.message.DeleteTopicsResponseData.DeletableTopicResult;
 import org.apache.kafka.common.message.DescribeGroupsRequestData;
@@ -169,6 +172,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -2357,8 +2361,28 @@ public class KafkaAdminClient extends AdminClient {
 
                         @Override
                         AbstractRequest.Builder createRequest(int timeoutMs) {
-                            return new DeleteRecordsRequest.Builder(timeoutMs, entry.getValue());
-                        }
+                            
+                            // Need to build a list of topics. Topics need a name and a list of partitions
+                            // Currently have a map of <name, partition> to broker. To build what I need, 
+                            // is the best way to do that to iterate over the same map twice? So that
+                            // can map all the partitions to the topic name? Seems frustrating. So can
+                            // I just make a list of topics that might have duplicates but with different
+                            // partitions attached?
+                            
+                            List<DeleteRecordsTopic> topics = new ArrayList<DeleteRecordsTopic>();
+                            
+                            for (Entry<TopicPartition, Long> topicMap : entry.getValue().entrySet()) {
+                                DeleteRecordsTopic topic = new DeleteRecordsTopic();
+                                topic.setName(topicMap.getKey().topic());
+                                DeleteRecordsPartition partition = new DeleteRecordsPartition();
+                                partition.setPartitionIndex(topicMap.getKey().partition());
+                                topic.setPartitions(Arrays.asList(partition));
+                                topics.add(topic);
+                            }
+                            return new DeleteRecordsRequest.Builder(new DeleteRecordsRequestData()
+                                    .setTimeoutMs(timeoutMs)
+                                    .setTopics(topics));
+                            }
 
                         @Override
                         void handleResponse(AbstractResponse abstractResponse) {
