@@ -2351,6 +2351,10 @@ public class KafkaAdminClient extends AdminClient {
                 }
 
                 for (final Map.Entry<Node, Map<TopicPartition, Long>> entry: leaders.entrySet()) {
+                   
+                }
+
+                for (final Map.Entry<Node, Map<TopicPartition, Long>> entry: leaders.entrySet()) {
 
                     final long nowDelete = time.milliseconds();
 
@@ -2362,23 +2366,24 @@ public class KafkaAdminClient extends AdminClient {
                         @Override
                         AbstractRequest.Builder createRequest(int timeoutMs) {
                             
-                            // Need to build a list of topics. Topics need a name and a list of partitions
-                            // Currently have a map of <name, partition> to broker. To build what I need, 
-                            // is the best way to do that to iterate over the same map twice? So that
-                            // can map all the partitions to the topic name? Seems frustrating. So can
-                            // I just make a list of topics that might have duplicates but with different
-                            // partitions attached?
-                            
                             List<DeleteRecordsTopic> topics = new ArrayList<DeleteRecordsTopic>();
                             
                             for (Entry<TopicPartition, Long> topicMap : entry.getValue().entrySet()) {
-                                DeleteRecordsTopic topic = new DeleteRecordsTopic();
-                                topic.setName(topicMap.getKey().topic());
-                                DeleteRecordsPartition partition = new DeleteRecordsPartition();
-                                partition.setPartitionIndex(topicMap.getKey().partition());
-                                topic.setPartitions(Arrays.asList(partition));
-                                topics.add(topic);
+                                DeleteRecordsTopic newTopic = new DeleteRecordsTopic();
+                                newTopic.setName(topicMap.getKey().topic());
+                                List<DeleteRecordsPartition> partitions = new ArrayList<DeleteRecordsPartition>();
+                                for (Entry<TopicPartition, Long> partitionMap : entry.getValue().entrySet()) {
+                                    DeleteRecordsPartition newPartition = new DeleteRecordsPartition();
+                                    if(partitionMap.getKey().topic() == newTopic.name()){
+                                        newPartition.setOffset(partitionMap.getValue());
+                                        newPartition.setPartitionIndex(partitionMap.getKey().partition());
+                                        partitions.add(newPartition);
+                                    }
+                                }
+                                newTopic.setPartitions(partitions);
+                                topics.add(newTopic);
                             }
+                            
                             return new DeleteRecordsRequest.Builder(new DeleteRecordsRequestData()
                                     .setTimeoutMs(timeoutMs)
                                     .setTopics(topics));
