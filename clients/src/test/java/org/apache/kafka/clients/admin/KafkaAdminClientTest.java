@@ -57,6 +57,9 @@ import org.apache.kafka.common.message.CreateTopicsResponseData;
 import org.apache.kafka.common.message.DeleteGroupsResponseData;
 import org.apache.kafka.common.message.DeleteGroupsResponseData.DeletableGroupResult;
 import org.apache.kafka.common.message.DeleteGroupsResponseData.DeletableGroupResultCollection;
+import org.apache.kafka.common.message.DeleteRecordsResponseData;
+import org.apache.kafka.common.message.DeleteRecordsResponseData.DeleteRecordsPartitionResult;
+import org.apache.kafka.common.message.DeleteRecordsResponseData.DeleteRecordsTopicResult;
 import org.apache.kafka.common.message.DeleteTopicsResponseData;
 import org.apache.kafka.common.message.DeleteTopicsResponseData.DeletableTopicResult;
 import org.apache.kafka.common.message.DescribeGroupsResponseData;
@@ -858,15 +861,27 @@ public class KafkaAdminClientTest {
         try (AdminClientUnitTestEnv env = new AdminClientUnitTestEnv(cluster)) {
             env.kafkaClient().setNodeApiVersions(NodeApiVersions.create());
 
-            Map<TopicPartition, DeleteRecordsResponse.PartitionResponse> m = new HashMap<>();
-            m.put(myTopicPartition0,
-                    new DeleteRecordsResponse.PartitionResponse(3, Errors.NONE));
-            m.put(myTopicPartition1,
-                    new DeleteRecordsResponse.PartitionResponse(DeleteRecordsResponse.INVALID_LOW_WATERMARK, Errors.OFFSET_OUT_OF_RANGE));
-            m.put(myTopicPartition3,
-                    new DeleteRecordsResponse.PartitionResponse(DeleteRecordsResponse.INVALID_LOW_WATERMARK, Errors.NOT_LEADER_FOR_PARTITION));
-            m.put(myTopicPartition4,
-                    new DeleteRecordsResponse.PartitionResponse(DeleteRecordsResponse.INVALID_LOW_WATERMARK, Errors.UNKNOWN_TOPIC_OR_PARTITION));
+            List<DeleteRecordsTopicResult> topics = new ArrayList<DeleteRecordsTopicResult>();
+            List<DeleteRecordsPartitionResult> partitions = new ArrayList<DeleteRecordsPartitionResult>();
+            partitions.add(new DeleteRecordsPartitionResult()
+                    .setErrorCode(Errors.NONE.code())
+                    .setLowWatermark(3)
+                    .setPartitionIndex(myTopicPartition0.partition()));
+            partitions.add(new DeleteRecordsPartitionResult()
+                    .setErrorCode(Errors.OFFSET_OUT_OF_RANGE.code())
+                    .setLowWatermark(DeleteRecordsResponse.INVALID_LOW_WATERMARK)
+                    .setPartitionIndex(myTopicPartition1.partition()));
+            partitions.add(new DeleteRecordsPartitionResult()
+                    .setErrorCode(Errors.NOT_LEADER_FOR_PARTITION.code())
+                    .setLowWatermark(DeleteRecordsResponse.INVALID_LOW_WATERMARK)
+                    .setPartitionIndex(myTopicPartition3.partition()));
+            partitions.add(new DeleteRecordsPartitionResult()
+                    .setErrorCode(Errors.UNKNOWN_TOPIC_OR_PARTITION.code())
+                    .setLowWatermark(DeleteRecordsResponse.INVALID_LOW_WATERMARK)
+                    .setPartitionIndex(myTopicPartition4.partition()));
+            topics.add(new DeleteRecordsTopicResult()
+                    .setName("my_topic")
+                    .setPartitions(partitions));
 
             List<MetadataResponse.TopicMetadata> t = new ArrayList<>();
             List<MetadataResponse.PartitionMetadata> p = new ArrayList<>();
@@ -885,7 +900,9 @@ public class KafkaAdminClientTest {
             t.add(new MetadataResponse.TopicMetadata(Errors.NONE, "my_topic", false, p));
 
             env.kafkaClient().prepareResponse(MetadataResponse.prepareResponse(cluster.nodes(), cluster.clusterResource().clusterId(), cluster.controller().id(), t));
-            env.kafkaClient().prepareResponse(new DeleteRecordsResponse(0, m));
+            env.kafkaClient().prepareResponse(new DeleteRecordsResponse(new DeleteRecordsResponseData()
+                    .setThrottleTimeMs(0)
+                    .setTopics(topics)));
 
             Map<TopicPartition, RecordsToDelete> recordsToDelete = new HashMap<>();
             recordsToDelete.put(myTopicPartition0, RecordsToDelete.beforeOffset(3L));

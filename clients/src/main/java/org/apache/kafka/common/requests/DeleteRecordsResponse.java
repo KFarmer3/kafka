@@ -17,6 +17,7 @@
 
 package org.apache.kafka.common.requests;
 
+import org.apache.kafka.clients.admin.DeleteTopicsResult;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.message.DeleteRecordsRequestData.DeleteRecordsTopic;
 import org.apache.kafka.common.message.DeleteRecordsResponseData;
@@ -109,7 +110,15 @@ public class DeleteRecordsResponse extends AbstractResponse {
     //Still need to work out if this is needed?
     
     public Map<TopicPartition, PartitionResponse> responses() {
-        return this.responses;
+        Map<TopicPartition, PartitionResponse> topicMap = new HashMap<TopicPartition, PartitionResponse>();
+        for(DeleteRecordsTopicResult topic : data.topics()){
+            for(DeleteRecordsPartitionResult partition : topic.partitions()) {
+                TopicPartition newTopic = new TopicPartition(topic.name(), partition.partitionIndex());
+                PartitionResponse newPartition = new PartitionResponse(partition.lowWatermark(), Errors.forCode(partition.errorCode()));
+                topicMap.put(newTopic, newPartition);
+            }
+        }
+        return topicMap;
     }
 
     @Override
