@@ -26,12 +26,16 @@ import org.apache.kafka.common.message.DeleteRecordsResponseData.DeleteRecordsTo
 import org.apache.kafka.common.protocol.ApiKeys;
 import org.apache.kafka.common.protocol.Errors;
 import org.apache.kafka.common.protocol.types.Struct;
+import org.apache.kafka.common.TopicPartition;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class DeleteRecordsRequest extends AbstractRequest {
+    
+    public static final long HIGH_WATERMARK = -1L;
 
     public static class Builder extends AbstractRequest.Builder<DeleteRecordsRequest> {
 
@@ -102,6 +106,18 @@ public class DeleteRecordsRequest extends AbstractRequest {
                 throw new IllegalArgumentException(String.format("Version %d is not valid. Valid versions for %s are 0 to %d",
                     versionId, this.getClass().getSimpleName(), ApiKeys.DELETE_RECORDS.latestVersion()));
         }
+    }
+    
+    public Map<TopicPartition, Long> partitionOffsets(){
+        Map<TopicPartition, Long> partitionOffsets = new HashMap<TopicPartition, Long>();
+        for(DeleteRecordsTopic topic : data.topics()){
+            for(DeleteRecordsPartition partition : topic.partitions()){
+                TopicPartition topicPartition = new TopicPartition(topic.name(), partition.partitionIndex());
+                partitionOffsets.put(topicPartition, partition.offset());
+            }
+        }
+        return partitionOffsets;
+        
     }
 
     public int timeout() {

@@ -17,32 +17,21 @@
 
 package org.apache.kafka.common.requests;
 
-import org.apache.kafka.clients.admin.DeleteTopicsResult;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.message.DeleteRecordsRequestData.DeleteRecordsTopic;
 import org.apache.kafka.common.message.DeleteRecordsResponseData;
+import org.apache.kafka.common.message.DeleteRecordsRequestData.DeleteRecordsPartition;
+import org.apache.kafka.common.message.DeleteRecordsRequestData.DeleteRecordsTopic;
 import org.apache.kafka.common.message.DeleteRecordsResponseData.DeleteRecordsPartitionResult;
 import org.apache.kafka.common.message.DeleteRecordsResponseData.DeleteRecordsTopicResult;
 import org.apache.kafka.common.protocol.ApiKeys;
 import org.apache.kafka.common.protocol.Errors;
-import org.apache.kafka.common.protocol.types.ArrayOf;
-import org.apache.kafka.common.protocol.types.Field;
-import org.apache.kafka.common.protocol.types.Schema;
 import org.apache.kafka.common.protocol.types.Struct;
-import org.apache.kafka.common.utils.CollectionUtils;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.apache.kafka.common.protocol.CommonFields.ERROR_CODE;
-import static org.apache.kafka.common.protocol.CommonFields.PARTITION_ID;
-import static org.apache.kafka.common.protocol.CommonFields.THROTTLE_TIME_MS;
-import static org.apache.kafka.common.protocol.CommonFields.TOPIC_NAME;
-import static org.apache.kafka.common.protocol.types.Type.INT64;
+import java.util.Map.Entry;
 
 public class DeleteRecordsResponse extends AbstractResponse {
     
@@ -106,8 +95,6 @@ public class DeleteRecordsResponse extends AbstractResponse {
     public List<DeleteRecordsTopicResult> topics() {
         return data.topics();
     }
-
-    //Still need to work out if this is needed?
     
     public Map<TopicPartition, PartitionResponse> responses() {
         Map<TopicPartition, PartitionResponse> topicMap = new HashMap<TopicPartition, PartitionResponse>();
