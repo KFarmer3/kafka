@@ -68,6 +68,9 @@ import org.apache.kafka.common.message.CreateTopicsRequestData;
 import org.apache.kafka.common.message.CreateTopicsRequestData.CreatableTopicCollection;
 import org.apache.kafka.common.message.CreateTopicsResponseData.CreatableTopicResult;
 import org.apache.kafka.common.message.DeleteGroupsRequestData;
+import org.apache.kafka.common.message.DeleteRecordsRequestData;
+import org.apache.kafka.common.message.DeleteRecordsRequestData.DeleteRecordsPartition;
+import org.apache.kafka.common.message.DeleteRecordsRequestData.DeleteRecordsTopic;
 import org.apache.kafka.common.message.DeleteTopicsRequestData;
 import org.apache.kafka.common.message.DeleteTopicsResponseData.DeletableTopicResult;
 import org.apache.kafka.common.message.DescribeGroupsRequestData;
@@ -169,6 +172,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -2347,6 +2351,10 @@ public class KafkaAdminClient extends AdminClient {
                 }
 
                 for (final Map.Entry<Node, Map<TopicPartition, Long>> entry: leaders.entrySet()) {
+                   
+                }
+
+                for (final Map.Entry<Node, Map<TopicPartition, Long>> entry: leaders.entrySet()) {
 
                     final long nowDelete = time.milliseconds();
 
@@ -2357,8 +2365,29 @@ public class KafkaAdminClient extends AdminClient {
 
                         @Override
                         AbstractRequest.Builder createRequest(int timeoutMs) {
-                            return new DeleteRecordsRequest.Builder(timeoutMs, entry.getValue());
-                        }
+                            
+                            List<DeleteRecordsTopic> topics = new ArrayList<DeleteRecordsTopic>();
+                            
+                            for (Entry<TopicPartition, Long> topicMap : entry.getValue().entrySet()) {
+                                DeleteRecordsTopic newTopic = new DeleteRecordsTopic();
+                                newTopic.setName(topicMap.getKey().topic());
+                                List<DeleteRecordsPartition> partitions = new ArrayList<DeleteRecordsPartition>();
+                                for (Entry<TopicPartition, Long> partitionMap : entry.getValue().entrySet()) {
+                                    DeleteRecordsPartition newPartition = new DeleteRecordsPartition();
+                                    if(partitionMap.getKey().topic() == newTopic.name()){
+                                        newPartition.setOffset(partitionMap.getValue());
+                                        newPartition.setPartitionIndex(partitionMap.getKey().partition());
+                                        partitions.add(newPartition);
+                                    }
+                                }
+                                newTopic.setPartitions(partitions);
+                                topics.add(newTopic);
+                            }
+                            
+                            return new DeleteRecordsRequest.Builder(new DeleteRecordsRequestData()
+                                    .setTimeoutMs(timeoutMs)
+                                    .setTopics(topics));
+                            }
 
                         @Override
                         void handleResponse(AbstractResponse abstractResponse) {

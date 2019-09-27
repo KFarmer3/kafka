@@ -76,6 +76,7 @@ import org.apache.kafka.common.metrics.Metrics
 import org.apache.kafka.common.network.{ListenerName, Send}
 import org.apache.kafka.common.protocol.{ApiKeys, Errors}
 import org.apache.kafka.common.record._
+import org.apache.kafka.common.message.DeleteRecordsResponseData
 import org.apache.kafka.common.replica.ClientMetadata
 import org.apache.kafka.common.replica.ClientMetadata.DefaultClientMetadata
 import org.apache.kafka.common.requests.CreateAclsResponse.AclCreationResponse
@@ -1815,7 +1816,9 @@ class KafkaApis(val requestChannel: RequestChannel,
       }
 
       sendResponseMaybeThrottle(request, requestThrottleMs =>
-        new DeleteRecordsResponse(requestThrottleMs, mergedResponseStatus.asJava))
+        new DeleteRecordsResponse(new DeleteRecordsResponseData()
+        .setThrottleTimeMs(requestThrottleMs)
+        .setTopics(mergedResponseStatus.asJava)))
     }
 
     if (authorizedForDeleteTopicOffsets.isEmpty)
